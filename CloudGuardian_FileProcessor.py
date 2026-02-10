@@ -5,10 +5,10 @@ app = Flask(__name__)
 s3 = boto3.client('s3', region_name='eu-west-2')
 bucket_name = f"cloudguardianai-mvp"
 
+permitted_extensions = {"txt", "json", "yaml"}
+
 def ensure_bucket_exists(bucket_name: str, region: str = "eu-west-2") -> None:
     # Checks if the bucket exists, creates if missing
-    s3 = boto3.client("s3",region_name=region)
-
     try: 
         existing_bucket = [b["Name"] for b in s3.list_buckets()["Buckets"]]
         if bucket_name not in existing_bucket:
@@ -22,6 +22,15 @@ def ensure_bucket_exists(bucket_name: str, region: str = "eu-west-2") -> None:
     except Exception as e:
         print(f"Error check or creating bucket {bucket_name}: {e}")
 
+def allowed_file(filename: str) -> bool:
+    # Check if the file has an allowed extension
+    # Returns true if allowed, false otherwise
+
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in permitted_extensions
+
+def preprocess_file(file_obj) -> str:
+    # Decode file contents 
+    return file_obj.read().decode()
 
 def analyse_policy(policy: dict) -> dict:
     """
@@ -45,6 +54,16 @@ def analyse_policy(policy: dict) -> dict:
 
     # Task: Implement analysis logic here
     # Example: detect wildcards, admin access, sensitive services
+
+    # Temporary lgoci: detect wildcard and admin access
+    for key, value in policy.items():
+        for "*" in str(value):
+            issues.append(f"Wildcard in {key}")
+        if str(value).lower() == "admin":
+            issues.append(f"Admin access in {key}")
+
+    if issues:
+        risk_score = min(100, len(issues)*10) # sample scoring
 
     return {
         "Risk score": risk_score,
