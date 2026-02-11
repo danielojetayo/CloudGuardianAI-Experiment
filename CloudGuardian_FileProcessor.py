@@ -55,9 +55,9 @@ def analyse_policy(policy: dict) -> dict:
     # Task: Implement analysis logic here
     # Example: detect wildcards, admin access, sensitive services
 
-    # Temporary lgoci: detect wildcard and admin access
+    # Temporary logic: detect wildcard and admin access
     for key, value in policy.items():
-        for "*" in str(value):
+        if "*" in str(value):
             issues.append(f"Wildcard in {key}")
         if str(value).lower() == "admin":
             issues.append(f"Admin access in {key}")
