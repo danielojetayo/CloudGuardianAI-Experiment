@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify
 import boto3, uuid, os
 
+test_policyA = {"Action":"", "Resource":"*"}
+test_policyB = {"Action":"s3:PutObject", "Resource":"arn:aws:s3::mybucket/*"}
+
+
 app = Flask(__name__)
 s3 = boto3.client('s3', region_name='eu-west-2')
 bucket_name = f"cloudguardianai-mvp"
@@ -58,19 +62,21 @@ def analyse_policy(policy: dict) -> dict:
     # Temporary logic: detect wildcard and admin access
     for key, value in policy.items():
         if "*" in str(value):
-            issues.append(f"Wildcard in {key}")
+            issues.append({"description":f"Wildcard in {key}", "weight":10})
         if str(value).lower() == "admin":
-            issues.append(f"Admin access in {key}")
+            issues.append({"description":f"Admin access in {key}","weight":30})
 
     if issues:
-        risk_score = min(100, len(issues)*10) # sample scoring
-
+        risk_score = sum(issue["weight"] for issue in issues)
+        risk_score = min(risk_score,100)
     return {
         "Risk score": risk_score,
         "Issues" : issues,
         "Rewritten Policy" : rewritten_policy
     }
 
+print(analyse_policy(test_policyA))
+print(analyse_policy(test_policyB))
 
 # Analyse file function
 def analyse_file(file_obj):
